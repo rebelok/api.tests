@@ -17,10 +17,26 @@ namespace TestVtsApi
 
         private static void Main(string[] args)
         {
+            TestTarifs();
+            TestPrice();
+            Console.ReadKey();
+        }
+
+        private static void TestTarifs()
+        {
+            Console.Write("Testing tarifs: ");
             var points = GetPoints();
             var data = GetTestData();
-           Console.Write( TestVtsApi(data, points));
-            Console.ReadKey();
+            Console.WriteLine(TestVtsApi(data, points));
+        }
+
+        private static void TestPrice()
+        {
+            Console.Write("Testing price: ");
+            var points = GetPoints();
+            var data = GetTestData();
+            data.Add("class_id","2");
+            Console.WriteLine(TestVtsApi(data, points));
         }
 
         private static Dictionary<string, string> GetTestData()
