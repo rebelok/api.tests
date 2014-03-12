@@ -43,7 +43,7 @@ namespace TestVtsApi
         {
             var dic = new Dictionary<string, string>
             {
-                {"company_id", "1"},
+                {"key", "6378f98dbacf0e50e7db69ba35ea14e0"},
                 {"phone", "+79119438660"},
                 {"time", "2014-07-25"}
             };
