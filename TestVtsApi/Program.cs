@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -8,7 +9,7 @@ namespace TestVtsApi
 {
     internal class Program
     {
-        private const string Url = "http://win.vtsystem.ru/api/";
+        private const string Url = "http://vtsystem.ru/api/";
 
         private const string UserAgent =
             "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36";
@@ -17,33 +18,56 @@ namespace TestVtsApi
 
         private static void Main(string[] args)
         {
-            TestTarifs();
-            TestPrice();
+            Console.WriteLine(TestGetServices());
+            Console.WriteLine(TestTarifs());
+            var order = TestPrice();
+            Console.WriteLine(order);
+            Console.WriteLine(TestOrderInfo(order, true));
+            Console.WriteLine(TestOrderInfo(order, false));
+
+
             Console.ReadKey();
         }
 
-        private static void TestTarifs()
+        private static string TestGetServices()
+        {
+            Console.Write("Testing GetServices: ");
+            var data = GetTestData();
+            data.Add("get_services", "1");
+            return (TestVtsApi("POST", data.ToUrlEncoded()));
+        }
+
+        private static string TestOrderInfo(string orderId, bool fullInfo)
+        {
+            Console.Write("Testing OrderInfo {0}: ", fullInfo ? "full" : string.Empty);
+            var data = GetTestData();
+            data.Add("order_id", orderId);
+            data.Add("type", fullInfo ? "1" : "0");
+            return (TestVtsApi("POST", data.ToUrlEncoded()));
+        }
+
+        private static string TestTarifs()
         {
             Console.Write("Testing tarifs: ");
             var points = GetPoints();
             var data = GetTestData();
-            Console.WriteLine(TestVtsApi(data, points));
+            return (TestVtsApi("POST", GetData(data, points)));
         }
 
-        private static void TestPrice()
+        private static string TestPrice()
         {
             Console.Write("Testing price: ");
             var points = GetPoints();
             var data = GetTestData();
-            data.Add("class_id","2");
-            Console.WriteLine(TestVtsApi(data, points));
+            data.Add("class_id", "2");
+            return (TestVtsApi("POST", GetData(data, points)));
         }
 
         private static Dictionary<string, string> GetTestData()
         {
             var dic = new Dictionary<string, string>
             {
-                {"key", "6378f98dbacf0e50e7db69ba35ea14e0"},
+                {"key", "aa40c527003225813a4d59866bc682ad"},
                 {"phone", "+79119438660"},
                 {"time", "2014-07-25"}
             };
@@ -74,49 +98,55 @@ namespace TestVtsApi
             return new List<Dictionary<string, string>> { point, point2, point3 };
         }
 
-        private static string TestVtsApi(Dictionary<string, string> data,List<Dictionary<string, string>> points)
+        private static string GetData(Dictionary<string, string> data, List<Dictionary<string, string>> points)
+        {
+            return data.ToUrlEncoded() + points.ToUrlEncoded();
+        }
+
+        private static string TestVtsApi(string method, string data)
         {
             var request = (HttpWebRequest)WebRequest.Create(Url);
 
-            request.Method = "POST";
+            request.Method = method;
             request.AllowAutoRedirect = false;
             request.UserAgent = UserAgent;
-           
+
+
+            request.ContentType = UrlEncoded;
             if (data != null)
             {
-                request.ContentType = UrlEncoded;
-                var body = data.ToUrlEncoded()+points.ToUrlEncoded();
-                request.ContentLength = body.Length;
+                request.ContentLength = data.Length;
 
                 using (var sm = request.GetRequestStream())
                 {
                     using (var sw = new StreamWriter(sm))
                     {
-                        sw.Write(body);
-                    }
-                }
-                using (var response = request.GetResponse() as HttpWebResponse)
-                {
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        throw new Exception(string.Format("Response status is {0}", response.StatusCode));
-                    }
-
-                    if (response.ContentLength == 0)
-                    {
-                        throw new Exception("Response doesn't contain content");
-                    }
-
-                    using (var rs = response.GetResponseStream())
-                    {
-                        using (var sr = new StreamReader(rs))
-                        {
-                            var content = sr.ReadToEnd();
-                            return content;
-                        }
+                        sw.Write(data);
                     }
                 }
             }
+            using (var response = request.GetResponse() as HttpWebResponse)
+            {
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    throw new Exception(string.Format("Response status is {0}", response.StatusCode));
+                }
+
+                if (response.ContentLength == 0)
+                {
+                    throw new Exception("Response doesn't contain content");
+                }
+
+                using (var rs = response.GetResponseStream())
+                {
+                    using (var sr = new StreamReader(rs, Encoding.UTF8))
+                    {
+                        var content = sr.ReadToEnd();
+                        return content;
+                    }
+                }
+            }
+
             return null;
         }
     }
@@ -136,7 +166,7 @@ namespace TestVtsApi
                     sb.Append(WebUtility.UrlEncode(string.Format("points[{0}][{1}]", i, kv.Key)));
                     sb.Append("=");
                     sb.Append(WebUtility.UrlEncode(kv.Value));
-                    
+
                 }
             }
 
