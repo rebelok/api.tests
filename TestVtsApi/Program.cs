@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace TestVtsApi
@@ -10,23 +11,86 @@ namespace TestVtsApi
     internal class Program
     {
         private const string Url = "http://vtsystem.ru/api/";
-
+        private const string Password = "818828";
+        private const string ClientPhone = "+79119438660";
         private const string UserAgent =
             "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36";
 
+        private const string SecretKey = "aa40c527003225813a4d59866bc682ad";
+
         private const string UrlEncoded = "application/x-www-form-urlencoded";
 
+        enum TestScenario
+        {
+            GetPassword,
+            CheckPassword,
+            RecoverPassword,
+            NormalFlow
+        }
         private static void Main(string[] args)
         {
-            Console.WriteLine(TestGetServices());
-            Console.WriteLine(TestTarifs());
-            var order = TestPrice();
-            Console.WriteLine(order);
-            Console.WriteLine(TestOrderInfo(order, true));
-            Console.WriteLine(TestOrderInfo(order, false));
+            var testScenario = TestScenario.NormalFlow;
+            switch (testScenario)
+            {
+                case TestScenario.GetPassword:
+                    Console.WriteLine(TestGetPassword());
+                    break;
+                case TestScenario.CheckPassword:
+                    Console.WriteLine(TestCheckPassword());
+                    break;
+                case TestScenario.RecoverPassword:
+                    Console.WriteLine(TestRecoverPassword());
+                    break;
+                case TestScenario.NormalFlow:
+                    Console.WriteLine(TestGetServices());
+                    Console.WriteLine(TestTarifs());
+                    var order = TestPrice();
+                    Console.WriteLine(order);
+                    Console.WriteLine(TestOrderInfo(order, true));
+                    Console.WriteLine(TestOrderInfo(order, false));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
 
 
             Console.ReadKey();
+        }
+        private static Dictionary<string, string> GetTestData()
+        {
+            var data = new Dictionary<string, string>
+            {
+                {"key", SecretKey},
+                {"client_phone", ClientPhone},
+                {"time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")}
+            };
+
+            return data;
+        }
+        private static string TestGetPassword()
+        {
+            Console.Write("Testing GetPassword: ");
+            var data = GetTestData();
+            data.Add("register", "1");
+            data.Remove("time");
+            return (TestVtsApi("POST", data.ToUrlEncoded()));
+        }
+
+        private static string TestRecoverPassword()
+        {
+            Console.Write("Testing RecoverPassword: ");
+            var data = GetTestData();
+            data.Add("recover", "1");
+            return (TestVtsApi("POST", data.ToUrlEncoded()));
+        }
+
+        private static string TestCheckPassword()
+        {
+            Console.Write("Testing CheckPassword: ");
+            var data = GetTestData();
+            data.Add("password", GetMD5(Password));
+            return (TestVtsApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestGetServices()
@@ -63,18 +127,20 @@ namespace TestVtsApi
             return (TestVtsApi("POST", GetData(data, points)));
         }
 
-        private static Dictionary<string, string> GetTestData()
+
+
+        private static string GetMD5(string input)
         {
-            var dic = new Dictionary<string, string>
+            var md5Hasher = MD5.Create();
+            var data = md5Hasher.ComputeHash(Encoding.Default.GetBytes(input));
+
+            var sBuilder = new StringBuilder();
+            foreach (var byt in data)
             {
-                {"key", "aa40c527003225813a4d59866bc682ad"},
-                {"phone", "+79119438660"},
-                {"time", "2014-07-25"}
-            };
-
-            return dic;
+                sBuilder.Append(byt.ToString("x2"));
+            }
+            return sBuilder.ToString();
         }
-
         private static List<Dictionary<string, string>> GetPoints()
         {
             var point = new Dictionary<string, string>
