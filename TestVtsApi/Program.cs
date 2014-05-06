@@ -10,7 +10,7 @@ namespace TestVtsApi
 {
     internal class Program
     {
-        private const string Url = "http://vtsystem.ru/api/";
+        private const string Url = "http://vtsystem1.ru/api/";
         private const string Password = "818828";
         private const string ClientPhone = "+79119438660";
         private const string UserAgent =
@@ -29,7 +29,7 @@ namespace TestVtsApi
         }
         private static void Main(string[] args)
         {
-            var testScenario = TestScenario.NormalFlow;
+            const TestScenario testScenario = TestScenario.NormalFlow;
             switch (testScenario)
             {
                 case TestScenario.GetPassword:
@@ -63,7 +63,7 @@ namespace TestVtsApi
             {
                 {"key", SecretKey},
                 {"client_phone", ClientPhone},
-                {"time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")}
+                {"password", GetMD5(Password)},
             };
 
             return data;
@@ -72,7 +72,8 @@ namespace TestVtsApi
         {
             Console.Write("Testing GetPassword: ");
             var data = GetTestData();
-            data.Add("register", "1");
+            data.Add("function", "register");
+            data.Remove("password");
             data.Remove("time");
             return (TestVtsApi("POST", data.ToUrlEncoded()));
         }
@@ -81,7 +82,8 @@ namespace TestVtsApi
         {
             Console.Write("Testing RecoverPassword: ");
             var data = GetTestData();
-            data.Add("recover", "1");
+            data.Add("function", "recover");
+            data.Remove("password");
             return (TestVtsApi("POST", data.ToUrlEncoded()));
         }
 
@@ -89,7 +91,7 @@ namespace TestVtsApi
         {
             Console.Write("Testing CheckPassword: ");
             var data = GetTestData();
-            data.Add("password", GetMD5(Password));
+            data.Add("function", "active_order");
             return (TestVtsApi("POST", data.ToUrlEncoded()));
         }
 
@@ -97,7 +99,7 @@ namespace TestVtsApi
         {
             Console.Write("Testing GetServices: ");
             var data = GetTestData();
-            data.Add("get_services", "1");
+            data.Add("function", "get_services");
             return (TestVtsApi("POST", data.ToUrlEncoded()));
         }
 
@@ -105,6 +107,7 @@ namespace TestVtsApi
         {
             Console.Write("Testing OrderInfo {0}: ", fullInfo ? "full" : string.Empty);
             var data = GetTestData();
+            data.Add("function", "order_info");
             data.Add("order_id", orderId);
             data.Add("type", fullInfo ? "1" : "0");
             return (TestVtsApi("POST", data.ToUrlEncoded()));
@@ -115,6 +118,9 @@ namespace TestVtsApi
             Console.Write("Testing tarifs: ");
             var points = GetPoints();
             var data = GetTestData();
+            data.Add("function", "calc_price");
+            data.Add("time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd"));
+            
             return (TestVtsApi("POST", GetData(data, points)));
         }
 
@@ -123,7 +129,10 @@ namespace TestVtsApi
             Console.Write("Testing price: ");
             var points = GetPoints();
             var data = GetTestData();
+            data.Add("function", "new_order");
             data.Add("class_id", "2");
+            data.Add("time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd"));
+
             return (TestVtsApi("POST", GetData(data, points)));
         }
 
