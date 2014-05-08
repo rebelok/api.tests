@@ -5,13 +5,14 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using ConsoleApplication1;
 
 namespace TestVtsApi
 {
     internal class Program
     {
         private const string Url = "http://vtsystem1.ru/api/";
-        private const string Password = "818828";
+        private const string Password = "371468";
         private const string ClientPhone = "+79119438660";
         private const string UserAgent =
             "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36";
@@ -63,7 +64,7 @@ namespace TestVtsApi
             {
                 {"key", SecretKey},
                 {"client_phone", ClientPhone},
-                {"password", GetMD5(Password)},
+                {"password", Helper.GetMD5(Password)},
             };
 
             return data;
@@ -75,7 +76,7 @@ namespace TestVtsApi
             data.Add("function", "register");
             data.Remove("password");
             data.Remove("time");
-            return (TestVtsApi("POST", data.ToUrlEncoded()));
+            return (CallApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestRecoverPassword()
@@ -84,7 +85,7 @@ namespace TestVtsApi
             var data = GetTestData();
             data.Add("function", "recover");
             data.Remove("password");
-            return (TestVtsApi("POST", data.ToUrlEncoded()));
+            return (CallApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestCheckPassword()
@@ -92,7 +93,7 @@ namespace TestVtsApi
             Console.Write("Testing CheckPassword: ");
             var data = GetTestData();
             data.Add("function", "active_order");
-            return (TestVtsApi("POST", data.ToUrlEncoded()));
+            return (CallApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestGetServices()
@@ -100,7 +101,7 @@ namespace TestVtsApi
             Console.Write("Testing GetServices: ");
             var data = GetTestData();
             data.Add("function", "get_services");
-            return (TestVtsApi("POST", data.ToUrlEncoded()));
+            return (CallApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestOrderInfo(string orderId, bool fullInfo)
@@ -110,7 +111,7 @@ namespace TestVtsApi
             data.Add("function", "order_info");
             data.Add("order_id", orderId);
             data.Add("type", fullInfo ? "1" : "0");
-            return (TestVtsApi("POST", data.ToUrlEncoded()));
+            return (CallApi("POST", data.ToUrlEncoded()));
         }
 
         private static string TestTarifs()
@@ -121,7 +122,7 @@ namespace TestVtsApi
             data.Add("function", "calc_price");
             data.Add("time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd"));
             
-            return (TestVtsApi("POST", GetData(data, points)));
+            return (CallApi("POST", GetData(data, points)));
         }
 
         private static string TestPrice()
@@ -133,23 +134,9 @@ namespace TestVtsApi
             data.Add("class_id", "2");
             data.Add("time", DateTime.Now.AddDays(1).ToString("yyyy-MM-dd"));
 
-            return (TestVtsApi("POST", GetData(data, points)));
+            return (CallApi("POST", GetData(data, points)));
         }
-
-
-
-        private static string GetMD5(string input)
-        {
-            var md5Hasher = MD5.Create();
-            var data = md5Hasher.ComputeHash(Encoding.Default.GetBytes(input));
-
-            var sBuilder = new StringBuilder();
-            foreach (var byt in data)
-            {
-                sBuilder.Append(byt.ToString("x2"));
-            }
-            return sBuilder.ToString();
-        }
+        
         private static List<Dictionary<string, string>> GetPoints()
         {
             var point = new Dictionary<string, string>
@@ -178,16 +165,14 @@ namespace TestVtsApi
             return data.ToUrlEncoded() + points.ToUrlEncoded();
         }
 
-        private static string TestVtsApi(string method, string data)
+        private static string CallApi(string method, string data)
         {
             var request = (HttpWebRequest)WebRequest.Create(Url);
-
             request.Method = method;
             request.AllowAutoRedirect = false;
             request.UserAgent = UserAgent;
-
-
             request.ContentType = UrlEncoded;
+
             if (data != null)
             {
                 request.ContentLength = data.Length;
@@ -221,53 +206,7 @@ namespace TestVtsApi
                     }
                 }
             }
-
             return null;
-        }
-    }
-
-    public static class Extentions
-    {
-        public static string ToUrlEncoded(this List<Dictionary<string, string>> points)
-        {
-            var sb = new StringBuilder();
-
-            for (int i = 0; i < points.Count; i++)
-            {
-                var point = points[i];
-                foreach (var kv in point)
-                {
-                    sb.Append("&");
-                    sb.Append(WebUtility.UrlEncode(string.Format("points[{0}][{1}]", i, kv.Key)));
-                    sb.Append("=");
-                    sb.Append(WebUtility.UrlEncode(kv.Value));
-
-                }
-            }
-
-            return sb.ToString();
-        }
-        public static string ToUrlEncoded(this Dictionary<string, string> parameters)
-        {
-            var sb = new StringBuilder();
-
-            var b = true;
-
-            foreach (var p in parameters)
-            {
-                if (!b)
-                {
-                    sb.Append("&");
-                }
-
-                b = false;
-
-                sb.Append(p.Key);
-                sb.Append("=");
-                sb.Append(WebUtility.UrlEncode(p.Value));
-            }
-
-            return sb.ToString();
         }
     }
 }
